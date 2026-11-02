@@ -1,0 +1,13 @@
+seekdb> SELECT id, path, title FROM specs
+         (1, 'specs/divide.md', '规格：divide 的除零行为')
+
+seekdb> SELECT id, path, symbol FROM code
+         (1, 'calc.py', 'add')
+         (2, 'calc.py', 'divide')
+
+seekdb> SELECT id, path, symbol FROM tests
+         (1, 'test_calc.py', 'TestCalc')
+         (2, 'test_calc.py', 'test_add')
+         (3, 'test_calc.py', 'test_divide_ok')
+         (4, 'test_calc.py', 'test_divide_by_zero')
+

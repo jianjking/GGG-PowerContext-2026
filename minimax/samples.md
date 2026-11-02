@@ -120,3 +120,30 @@ python context_module.py ingest --root ./demo_project
 ```
 
 PowerContext 侧换一个 scope 即可获得干净状态。
+
+---
+
+## 9. 实际运行证据（本 commit 实测，Ubuntu + seekdb 1.4.0 + PowerContext master）
+
+| 验收项 | 证据文件 | 内容摘要 |
+|---|---|---|
+| 能够运行 | `evidence/context_output.log` | init / ingest / context 三条命令真实输出 |
+| 上下文正确 | `evidence/context_output.log` | `context.md` 含 `specs/divide.md`、`calc.py → divide`、`test_calc.py → test_divide_by_zero` |
+| 数据库实际参与 | `evidence/db_query.log` | 三条 `SELECT` 返回 specs/code/tests 的真实行 |
+| 状态能够复用 | `evidence/state_resume.log` | `state` 写入 → 新进程 `resume` 返回 `status: ready` |
+| MiniMax 实际参与 | `evidence/minimax_reply.png` | MiniMax 依据上下文给出的 `divide` 实现与规格符合性核对 |
+| 代码修改有效 | `evidence/test_before.log` / `evidence/test_after.log` | 改前 `test_divide_by_zero` 失败，改后 3 个测试全部通过 |
+
+实测环境：seekdb 1.4.0（deb 安装，MySQL 协议 2881）、PowerContext master（`powercontext[cli,server]` 从 git 安装，端口 8000）。
+
+### 实测中发现的检索限制
+
+PowerContext 默认全文检索没有中文分词，纯中文查询词可能召不回：
+
+```
+query=除零        -> status: empty
+query=ValueError  -> status: ready（命中 2 条记忆）
+query=calc.py     -> status: ready
+```
+
+因此 `resume` 建议用 ASCII 关键词（任务名、文件路径、英文标识符）或中英混写；这也记录在 README 的已知限制里。

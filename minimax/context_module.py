@@ -95,7 +95,7 @@ def cmd_ingest(a):
                 continue
             full = os.path.join(dirpath, f)
             rel = os.path.relpath(full, root)
-            text = open(full, encoding="utf-8", errors="replace").read()
+            text = open(full, encoding="utf-8-sig", errors="replace").read()
             if rel.startswith("specs") or f.endswith(".md"):
                 title = text.splitlines()[0].lstrip("# ").strip() if text.strip() else f
                 with c.cursor() as cur:

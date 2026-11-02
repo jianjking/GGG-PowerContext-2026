@@ -1,0 +1,74 @@
+$ python3 context_module.py init
+seekdb 初始化完成：库 sdd，表 specs / code / tests
+$ python3 context_module.py ingest --root ./demo_project
+导入完成：规格 1，代码 1，测试 1
+$ python3 context_module.py context --task "除数为 0 时应该抛出 ValueError" --out context.md
+
+已写出上下文文件：context.md
+{
+  "task": "除数为 0 时应该抛出 ValueError",
+  "keywords": [
+    "除数为",
+    "时应该抛出",
+    "ValueError"
+  ],
+  "specs": [
+    {
+      "path": "specs/divide.md",
+      "title": "规格：divide 的除零行为",
+      "snippet": "# 规格：divide 的除零行为\ntags: spec,calc,error-handling\n\n## 规则 DIV-1\n`divide(a, b)` 在 `b == 0` 时必须抛出 `ValueError`，异常信息固定为 `divisor must be non-zero`。\n\n## 规则 DIV-2\n除零以外的输入，`divide` 的行为保持不变（返回 a / b 的浮点结果），不得引入新的异常类型。\n\n## 影响面\n- 代码：`calc.py` 中的 `divide`\n- 测试：`test_calc.py::test_divide_by_zero`（目标测试）、`test_cal"
+    }
+  ],
+  "code": [
+    {
+      "path": "calc.py",
+      "symbol": "add",
+      "snippet": "\"\"\"示例业务工程：一个极小的四则运算模块。\"\"\"\n\n\ndef add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    # 规则 DIV-1：除数为 0 时抛出 ValueError，信息固定\n    if b == 0:\n        raise ValueError(\"divisor must be non-zero\")\n    # 规则 DIV-2：其余输入行为不变\n    return a / b\n"
+    },
+    {
+      "path": "calc.py",
+      "symbol": "divide",
+      "snippet": "\"\"\"示例业务工程：一个极小的四则运算模块。\"\"\"\n\n\ndef add(a, b):\n    return a + b\n\n\ndef divide(a, b):\n    # 规则 DIV-1：除数为 0 时抛出 ValueError，信息固定\n    if b == 0:\n        raise ValueError(\"divisor must be non-zero\")\n    # 规则 DIV-2：其余输入行为不变\n    return a / b\n"
+    }
+  ],
+  "tests": [
+    {
+      "path": "test_calc.py",
+      "symbol": "TestCalc",
+      "snippet": "import unittest\n\nfrom calc import add, divide\n\n\nclass TestCalc(unittest.TestCase):\n    def test_add(self):\n        self.assertEqual(add(2, 3), 5)\n\n    def test_divide_ok(self):\n        self.assertEqual(divide(6, 3), 2)\n\n    def test_divide_by_zero(self):\n        # 目标行为：除数为 0 时抛 ValueError，且信息为 divis"
+    },
+    {
+      "path": "test_calc.py",
+      "symbol": "test_add",
+      "snippet": "import unittest\n\nfrom calc import add, divide\n\n\nclass TestCalc(unittest.TestCase):\n    def test_add(self):\n        self.assertEqual(add(2, 3), 5)\n\n    def test_divide_ok(self):\n        self.assertEqual(divide(6, 3), 2)\n\n    def test_divide_by_zero(self):\n        # 目标行为：除数为 0 时抛 ValueError，且信息为 divis"
+    },
+    {
+      "path": "test_calc.py",
+      "symbol": "test_divide_ok",
+      "snippet": "import unittest\n\nfrom calc import add, divide\n\n\nclass TestCalc(unittest.TestCase):\n    def test_add(self):\n        self.assertEqual(add(2, 3), 5)\n\n    def test_divide_ok(self):\n        self.assertEqual(divide(6, 3), 2)\n\n    def test_divide_by_zero(self):\n        # 目标行为：除数为 0 时抛 ValueError，且信息为 divis"
+    },
+    {
+      "path": "test_calc.py",
+      "symbol": "test_divide_by_zero",
+      "snippet": "import unittest\n\nfrom calc import add, divide\n\n\nclass TestCalc(unittest.TestCase):\n    def test_add(self):\n        self.assertEqual(add(2, 3), 5)\n\n    def test_divide_ok(self):\n        self.assertEqual(divide(6, 3), 2)\n\n    def test_divide_by_zero(self):\n        # 目标行为：除数为 0 时抛 ValueError，且信息为 divis"
+    }
+  ]
+}
+
+----- context.md -----
+# 开发上下文
+
+任务：除数为 0 时应该抛出 ValueError
+
+## 适用规格
+- `specs/divide.md` — 规格：divide 的除零行为
+
+## 需要修改的代码
+- `calc.py` → `add`
+- `calc.py` → `divide`
+
+## 验证用测试
+- `test_calc.py` → `TestCalc`
+- `test_calc.py` → `test_add`
+- `test_calc.py` → `test_divide_ok`
+- `test_calc.py` → `test_divide_by_zero`

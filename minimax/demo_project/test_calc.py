@@ -1,4 +1,4 @@
-﻿import unittest
+import unittest
 
 from calc import add, divide
 

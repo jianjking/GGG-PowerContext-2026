@@ -157,3 +157,5 @@ python context_module.py resume --query "除零"
 | 代码与测试 | `samples.md` 中的 diff 与测试日志；实际快照由提交的 commit 提供 |
 | 技术使用记录 | `samples.md` 第 5 节（需补 MiniMax 截图） |
 | 一页技术说明 | 本文件第 6 节 |
+
+- **检索语言限制（实测）**：PowerContext 默认全文检索不含中文分词，纯中文查询词（如「除零」）可能返回 `empty`，用 ASCII 关键词（如 `ValueError`、`calc.py`）可正常召回。已在 `samples.md` 第 9 节记录实测对比。

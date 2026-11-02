@@ -1,4 +1,4 @@
-﻿# 规格：divide 的除零行为
+# 规格：divide 的除零行为
 tags: spec,calc,error-handling
 
 ## 规则 DIV-1
