@@ -48,6 +48,23 @@ minimax/
 
 ## 5. 启动步骤
 
+### 5.0 一键跑通（推荐，评审用这个）
+
+```bash
+bash setup.sh     # 装 seekdb + 装 PowerContext + 建 scope + 导入工程资料
+bash verify.sh    # 逐条验证 6 个必做项，最后打印 PASS/FAIL
+```
+
+预期输出末尾：
+
+```
+======== 结果：6 项通过，0 项失败 ========
+全部通过 ✅
+```
+
+下面是等效的手工步骤（5.1~5.7），便于排查问题。
+
+
 ### 5.1 起 seekdb（本次实测可用）
 
 ```bash
@@ -181,4 +198,5 @@ python context_module.py resume --query "除零"
 | 一页技术说明 | 本文件第 6 节 |
 
 - **检索语言限制（实测）**：PowerContext 默认全文检索不含中文分词，纯中文查询词（如「除零」）可能返回 `empty`，用 ASCII 关键词（如 `ValueError`、`calc.py`）可正常召回。已在 `samples.md` 第 9 节记录实测对比。
+
 
