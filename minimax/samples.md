@@ -88,11 +88,14 @@ Ran 3 tests — OK
 
 ## 5. 技术使用记录（核对材料）
 
-| 证据 | 怎么产生 |
+| 证据 | 文件 |
 |---|---|
-| **MiniMax 开发记录** | 把 `context.md` 发给 MiniMax 的对话截图 + 它返回的 diff 截图（**需参赛者补充**） |
-| **数据库查询记录** | `SELECT path, symbol FROM code;` 与 `SELECT path, title FROM specs;` 的结果截图 |
-| **状态写入/复用记录** | 第 6 节的 `state` / `resume` 输出截图 |
+| **MiniMax 开发记录** | `evidence/minimax_reply.png`（截图：任务上下文 → 返回的 `divide` 实现 + 规格符合性核对） |
+| **修改前测试日志** | `evidence/test_before.log`（`test_divide_by_zero` 失败：ZeroDivisionError，其余 2 项通过） |
+| **修改后测试日志** | `evidence/test_after.log`（3 项全部通过） |
+| **代码差异** | 见下方 diff；实际快照见本 commit |
+| **数据库查询记录** | 运行 `SELECT path, symbol FROM code;` 与 `SELECT path, title FROM specs;` 并截图（见第 8 节） |
+| **状态写入/复用记录** | 第 6 节的 `state` / `resume` 输出
 
 ## 6. 任务状态的保存与复用
 

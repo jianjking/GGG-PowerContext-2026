@@ -6,6 +6,8 @@ def add(a, b):
 
 
 def divide(a, b):
-    # 规范要求：除数为 0 时抛出 ValueError
-    # 当前实现直接做除法，会抛 ZeroDivisionError —— 这正是本次任务要改的地方
+    # 规则 DIV-1：除数为 0 时抛出 ValueError，信息固定
+    if b == 0:
+        raise ValueError("divisor must be non-zero")
+    # 规则 DIV-2：其余输入行为不变
     return a / b
