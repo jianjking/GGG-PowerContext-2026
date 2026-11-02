@@ -1,4 +1,4 @@
-# SDD 工程上下文模块（minimax/）
+﻿# SDD 工程上下文模块（minimax/）
 
 > 赛题：规有所依 —— 面向软件持续演进的 SDD 系统
 > 技术组合：**MiniMax（代码修改）＋ seekdb（工程资料存储与检索）＋ PowerContext（任务状态）**
@@ -41,24 +41,46 @@ minimax/
 | 项 | 版本 |
 |---|---|
 | Python | 3.9+ |
-| 依赖 | `pymysql`（`pip install pymysql`） |
+| 依赖 | `pymysql`（`pip install pymysql`）；PowerContext 需 Python 3.11+ |
 | seekdb | 1.4.x，MySQL 协议，默认 `127.0.0.1:2881`，账号 `root` / 空密码 |
 | PowerContext | master，默认 `http://127.0.0.1:8000` |
 | MiniMax | Token Plan（网页版或 API 均可），用于实际修改代码 |
 
 ## 5. 启动步骤
 
-### 5.1 起 seekdb
+### 5.1 起 seekdb（本次实测可用）
 
 ```bash
-docker run -d --name seekdb -p 2881:2881 oceanbase/seekdb:latest
+curl -fL -o /tmp/seekdb.deb \
+  https://github.com/oceanbase/seekdb/releases/download/v1.4.0/seekdb_1.4.0-100000212026082616ubuntu22.04_amd64.deb
+sudo dpkg -i /tmp/seekdb.deb || sudo apt-get -f install -y    # 缺 libaio1 时由 apt 补齐
+
+# Ubuntu 24.04+ 兼容修复：库名变成 libaio.so.1t64，而 seekdb 找 libaio.so.1
+sudo ln -sf /usr/lib/x86_64-linux-gnu/libaio.so.1t64 /usr/lib/x86_64-linux-gnu/libaio.so.1
+sudo ldconfig
+
+sudo systemctl start seekdb
+ss -ltn | grep 2881        # 看到监听即成功
 ```
 
-### 5.2 起 PowerContext
+> Docker 方式（镜像可拉取时）：`docker run -d -p 2881:2881 <可用的 seekdb 镜像>`。
+> 注意 Docker Hub 上并没有 `oceanbase/seekdb:latest` 这个标签，需要按官网提供的镜像名拉取。
+
+### 5.2 起 PowerContext（注意：一定要带 `[cli,server]` 并从 git 安装）
+
+PyPI 上的 `powercontext` **只有客户端，没有 `server` 子命令**，必须从 git 装：
 
 ```bash
-uv tool install --force "powercontext[cli,server] @ git+https://github.com/oceanbase/powercontext.git@master"
-powercontext server run
+python3 -m venv /opt/pcv
+/opt/pcv/bin/pip install --upgrade pip
+/opt/pcv/bin/pip install "powercontext[cli,server] @ git+https://github.com/oceanbase/powercontext.git@master"
+
+# 该包依赖声明不全，需补装（缺哪个装哪个）：
+/opt/pcv/bin/pip install typer pydantic-settings greenlet "sqlalchemy[asyncio]" \
+    opentelemetry-api opentelemetry-sdk alembic jsonschema apscheduler platformdirs
+
+/opt/pcv/bin/powercontext server run      # 监听 8000
+curl -s http://127.0.0.1:8000/health/live # -> {"status":"ok"}
 ```
 
 建一个 scope 并把 ID 记下来（`init_powercontext.py` 见 `dify/scripts/`，或直接 curl）：
@@ -159,3 +181,4 @@ python context_module.py resume --query "除零"
 | 一页技术说明 | 本文件第 6 节 |
 
 - **检索语言限制（实测）**：PowerContext 默认全文检索不含中文分词，纯中文查询词（如「除零」）可能返回 `empty`，用 ASCII 关键词（如 `ValueError`、`calc.py`）可正常召回。已在 `samples.md` 第 9 节记录实测对比。
+
