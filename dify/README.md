@@ -114,3 +114,5 @@ dify/
 | 运行说明 | `dify/README.md` |
 | 验证样例与运行证据 | `dify/samples.md` |
 | 数据初始化方式 | `dify/scripts/init_powercontext.py` |
+
+> **技术选型说明**：赛题原文「Dify + seekdb、Dify + PowerContext、Dify + seekdb + PowerContext 均符合技术选型要求」。本作品选择 **PowerContext** 承担长期记忆，未使用 seekdb。README 中提到的 SQLite 是 PowerContext 自身的默认存储后端，不是本作品的选型。

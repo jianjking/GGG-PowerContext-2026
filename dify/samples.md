@@ -101,3 +101,41 @@ curl -s -X POST http://127.0.0.1:8000/v1/context/prepare \
 | PowerContext 真实生效 | 样例 B：新会话仍能说出上一次的偏好；日志里 `http_prepare` 返回 `ready` |
 | 数据可初始化 | `scripts/init_powercontext.py` 一条命令建 scope + 写记忆 |
 | 过程可复现 | 本文件 + README 的步骤，无需作者本地私有数据 |
+
+---
+
+## 6. 真实运行记录（本 commit 补充）
+
+### 6.1 两个 HTTP 节点与 PowerContext 的实际调用
+
+`app.yml` 中两个 http-request 节点的 `url` 分别为：
+
+```yaml
+url: '{{#env.POWERCONTEXT_URL#}}/v1/context/prepare'    # 读取记忆
+url: '{{#env.POWERCONTEXT_URL#}}/v1/memory/remember'    # 写入记忆
+```
+
+用**相同 URL / body / header** 直接调用真实 PowerContext 实例的记录见
+`evidence/powercontext_calls.log`，关键结果：
+
+```
+节点 2 写入记忆：
+POST /v1/memory/remember
+{"changed":true,"records":[{"artifact":{"artifact_id":"art_683e...","revision":1},
+ "kind":"interaction","text":"客人说：老板，还记得我吗？(honey rum) / 老板回：老样子，蜂蜜朗姆？"}]}
+
+节点 1 读取记忆：
+POST /v1/context/prepare  {"query":"honey rum"}
+{"status":"ready","content":"...BEGIN_POWERCONTEXT_PREPARED_CONTEXT_V1
+ {\"items\":[{\"content\":\"客人说：老板，还记得我吗？(honey rum) / 老板回：老样子，蜂蜜朗姆？\"}]}
+ END_POWERCONTEXT_PREPARED_CONTEXT_V1","content_bytes":633}
+```
+
+即：**写入成功 → 下一轮能读回同一段记忆**，这正是 Chatflow 里两个节点要做的事。
+
+复现命令：`bash scripts/powercontext_demo.sh`
+
+### 6.2 说明
+
+- 本仓库提交环境里没有可用的 Dify 实例（Docker Hub 不可达），因此上面的记录是**按 Chatflow 节点的真实请求参数**调用 PowerContext 得到的，用于证明集成链路可用；Dify 内的运行请按 README 导入 DSL 后执行。
+- PowerContext 全文检索不含中文分词，查询词建议用 ASCII（`honey rum`、`calc.py`）或中英混写。

@@ -132,6 +132,7 @@ workflow:
           max_write_timeout: 10
         title: 读取记忆（PowerContext）
         type: http-request
+        url: '{{#env.POWERCONTEXT_URL#}}/v1/context/prepare'
         variables: []
       height: 128
       id: http_prepare
@@ -224,6 +225,7 @@ workflow:
           max_write_timeout: 10
         title: 写入记忆（PowerContext）
         type: http-request
+        url: '{{#env.POWERCONTEXT_URL#}}/v1/memory/remember'
         variables: []
       height: 128
       id: http_remember
