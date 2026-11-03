@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/bin/bash
 # 证据：按 Chatflow 两个 HTTP 节点的真实请求（相同 URL / body / header）调用 PowerContext
 cd /mnt/c/Users/27058/Documents/deepseek-harness/default-workspace/pc-repo/dify || exit 1
 mkdir -p evidence
