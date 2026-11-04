@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "description": "检索质量评测集：24 条查询，覆盖精确词、语义、跨文档与配置类问题。相关文档以 docId 标注，按块级检索结果折算到文档级。",
+  "metric": "Recall@5 / nDCG@5（文档级二值相关）",
+  "queries": [
+    { "id": "q01", "q": "浏览器不支持 WebGPU 时会怎样自动降级？", "type": "semantic", "relevant": ["webgpu", "transformersjs", "onnxruntime-web"] },
+    { "id": "q02", "q": "INT8 量化后 bge-small-zh 模型体积能缩小多少？", "type": "exact", "relevant": ["int8"] },
+    { "id": "q03", "q": "seekdb 的混合检索用什么算法融合向量和全文结果？", "type": "semantic", "relevant": ["hybrid-rrf", "seekdb"] },
+    { "id": "q04", "q": "为什么端侧推理更有利于文档隐私？", "type": "semantic", "relevant": ["edge-ai"] },
+    { "id": "q05", "q": "HNSW 索引刷新后新写入的文档才能被检索到吗？", "type": "exact", "relevant": ["seekdb-vector"] },
+    { "id": "q06", "q": "FP16 相比 FP32 的精度损失大吗？", "type": "semantic", "relevant": ["fp16", "int8"] },
+    { "id": "q07", "q": "Transformers.js 如何把模型放到 Web Worker 里运行？", "type": "exact", "relevant": ["transformersjs"] },
+    { "id": "q08", "q": "中文全文检索没有空格时怎么分词？", "type": "exact", "relevant": ["seekdb-fulltext"] },
+    { "id": "q09", "q": "如何评估量化前后的检索质量变化？", "type": "semantic", "relevant": ["rag", "perf", "int8"] },
+    { "id": "q10", "q": "批处理对 embedding 向量化吞吐有什么影响？", "type": "semantic", "relevant": ["perf", "onnxruntime-web"] },
+    { "id": "q11", "q": "seekdb 支持 MySQL 协议和事务吗？", "type": "exact", "relevant": ["seekdb"] },
+    { "id": "q12", "q": "浏览器端模型文件放在哪里、如何离线加载？", "type": "semantic", "relevant": ["transformersjs", "edge-ai"] },
+    { "id": "q13", "q": "WebGPU 和 WASM 后端应该如何选择？", "type": "semantic", "relevant": ["webgpu", "onnxruntime-web"] },
+    { "id": "q14", "q": "知识库文档切分多长比较合适？", "type": "semantic", "relevant": ["rag"] },
+    { "id": "q15", "q": "RRF 的 rank constant 有什么作用？", "type": "exact", "relevant": ["hybrid-rrf"] },
+    { "id": "q16", "q": "为什么不能在客户端分别取两路结果再拼合？", "type": "semantic", "relevant": ["hybrid-rrf", "seekdb"] },
+    { "id": "q17", "q": "seekdb 创建 collection 时如何配置向量维度和距离度量？", "type": "exact", "relevant": ["seekdb-vector", "seekdb"] },
+    { "id": "q18", "q": "端到端查询延迟应该拆成哪些阶段来计时？", "type": "semantic", "relevant": ["perf"] },
+    { "id": "q19", "q": "INT8 量化校准需要什么样的数据？", "type": "semantic", "relevant": ["int8"] },
+    { "id": "q20", "q": "RAG 检索结果如何展示原文引用来源？", "type": "semantic", "relevant": ["rag"] },
+    { "id": "q21", "q": "WebGPU 的 compute shader 主要用来做什么？", "type": "exact", "relevant": ["webgpu"] },
+    { "id": "q22", "q": "SharedArrayBuffer 对 WASM 多线程有什么作用？", "type": "exact", "relevant": ["onnxruntime-web"] },
+    { "id": "q23", "q": "连续导入和切换知识库时如何保证检索结果一致？", "type": "semantic", "relevant": ["seekdb-vector", "seekdb", "perf"] },
+    { "id": "q24", "q": "bge-small-zh-v1.5 输出多少维向量？", "type": "exact", "relevant": ["transformersjs", "fp16"] }
+  ]
+}

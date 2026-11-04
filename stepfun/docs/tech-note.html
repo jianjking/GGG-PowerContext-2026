@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<title>一页技术说明</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 12mm; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif; color: #171a26; font-size: 9.6pt; line-height: 1.55; }
+  h1 { font-size: 17pt; margin: 0 0 2mm; letter-spacing: -0.02em; }
+  .sub { color: #667085; font-size: 8.4pt; margin-bottom: 4mm; }
+  h2 { font-size: 11pt; margin: 4mm 0 1.6mm; padding-left: 2.4mm; border-left: 3px solid #4f46e5; }
+  p { margin: 0 0 1.6mm; text-align: justify; }
+  table { width: 100%; border-collapse: collapse; margin: 1.5mm 0 2.5mm; font-size: 8.7pt; }
+  th { text-align: left; background: #f2f3f9; color: #4b5163; font-weight: 600; padding: 1.4mm 2mm; border-bottom: 0.4pt solid #dfe2ec; }
+  td { padding: 1.3mm 2mm; border-bottom: 0.4pt solid #eceef5; }
+  td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+  .kpis { display: flex; gap: 2mm; margin: 2mm 0 1mm; }
+  .kpi { flex: 1; border: 0.5pt solid #e2e5ef; border-radius: 2.2mm; padding: 2mm 2.5mm; background: #fafbff; }
+  .kpi b { display: block; font-size: 13pt; color: #3f37c9; letter-spacing: -0.02em; }
+  .kpi span { color: #6b7280; font-size: 7.8pt; }
+  .note { color: #667085; font-size: 8pt; }
+  .tag { display: inline-block; background: #eef0ff; color: #4f46e5; border-radius: 1.2mm; padding: 0.2mm 1.4mm; font-size: 7.6pt; font-weight: 600; }
+  .two { display: flex; gap: 4mm; }
+  .two > div { flex: 1; }
+  ul { margin: 0 0 1.5mm 4mm; padding: 0; }
+  li { margin-bottom: 0.5mm; }
+  footer { margin-top: 3mm; border-top: 0.4pt solid #e2e5ef; padding-top: 1.5mm; color: #8a91a3; font-size: 7.4pt; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+  <h1>端侧 AI 推理性能优化与 seekdb 混合检索</h1>
+  <div class="sub">阶跃星辰赛题 · 端侧知识库（stepfun/） · bge-small-zh-v1.5 · Transformers.js + ONNX Runtime Web · seekdb 1.4.0</div>
+
+  <h2>方案</h2>
+  <p>浏览器 Web Worker 内完成文档/查询向量化：优先 <b>WebGPU + FP16</b>，申请 adapter 或热身推理失败即自动降级 <b>WASM + INT8</b>，界面标注后端与原因。Node API 通过 seekdb-js 将 id、原文、512 维向量、元数据写入 collection；检索调用一次 <b>hybridSearch</b>：<span class="tag">$contains</span> 走 ngram 全文、<span class="tag">knn</span> 走 HNSW cosine、<span class="tag">rank.rrf</span> 在数据库内融合，客户端不拼合两路结果。稳定块 ID + upsert 保证幂等，批量写入后统一 refresh_index。</p>
+
+  <h2>量化与质量</h2>
+  <table>
+    <tr><th>模型</th><th class="n">体积</th><th class="n">压缩比</th><th class="n">Recall@5</th><th class="n">nDCG@5</th><th class="n">相对 FP32</th></tr>
+    <tr><td>FP32 基线</td><td class="n">90.5 MB</td><td class="n">1.00×</td><td class="n">0.9653</td><td class="n">0.9012</td><td class="n">—</td></tr>
+    <tr><td>FP16（WebGPU）</td><td class="n">45.3 MB</td><td class="n">2.00×</td><td class="n">0.9653</td><td class="n">0.9012</td><td class="n">0.00 pp</td></tr>
+    <tr><td>INT8（WASM）</td><td class="n">22.9 MB</td><td class="n">3.95×</td><td class="n">0.9444</td><td class="n">0.8999</td><td class="n">−2.08 / −0.13 pp</td></tr>
+  </table>
+  <p class="note">评测集 24 条中文查询、12 篇文档 / 26 个块；文档级 Recall@5 / nDCG@5，取每个文档最高分块；与线上相同的切分、tokenizer 与 CLS+L2 归一化。</p>
+
+  <h2>性能（Windows 11 / 32 核 / Edge 156 headless / 12 篇 26 块）</h2>
+  <div class="kpis">
+    <div class="kpi"><b>3.8×</b><span>WebGPU 批量向量化加速（26 块）</span></div>
+    <div class="kpi"><b>18.2 ms</b><span>WebGPU 端到端查询中位数</span></div>
+    <div class="kpi"><b>20.0 ms</b><span>WASM 端到端查询中位数</span></div>
+    <div class="kpi"><b>3.95×</b><span>INT8 模型压缩比</span></div>
+  </div>
+  <table>
+    <tr><th>指标</th><th class="n">WebGPU + FP16</th><th class="n">WASM + INT8</th></tr>
+    <tr><td>模型加载（含 tokenizer + 热身）</td><td class="n">1.33 s</td><td class="n">0.66 s</td></tr>
+    <tr><td>文档向量化（26 块，batch=8）</td><td class="n">277.7 ms（93.6 块/s）</td><td class="n">1064.7 ms（24.4 块/s）</td></tr>
+    <tr><td>seekdb 写入 / 索引刷新</td><td class="n">87.1 / 628.7 ms</td><td class="n">137.5 / 663.2 ms</td></tr>
+    <tr><td>查询向量化（中位数）</td><td class="n">10.40 ms</td><td class="n">5.95 ms</td></tr>
+    <tr><td>seekdb 混合检索（中位数）</td><td class="n">5.38 ms</td><td class="n">8.80 ms</td></tr>
+    <tr><td>端到端查询（中位数 / P95）</td><td class="n">18.15 / 21.19 ms</td><td class="n">20.01 / 23.00 ms</td></tr>
+  </table>
+  <p><b>结论：</b>WebGPU 的收益集中在批量文档向量化（约 3.8×）；batch=1 时 WASM + INT8 并不慢，查询优化应聚焦模型缓存、Worker 预热、单条 batch 与把检索下推到数据库，而不是盲目切 GPU。首次导入后的首查有 60–83 ms 冷启动，预热后稳定在约 20 ms。</p>
+
+  <h2>工程优化</h2>
+  <ul>
+    <li>导入 batch=8、查询 batch=1；模型与 ORT WASM 全部本地化，运行时不依赖 CDN。</li>
+    <li>26 条向量按 32 条一批写入，整批结束只调用一次 refresh_index。</li>
+    <li>Web Worker 隔离推理；COOP/COEP + crossOriginIsolated 时启用 4 线程 WASM。</li>
+    <li>内置分阶段计时面板，报告 P50/P95，区分首次加载与预热后性能。</li>
+    <li>seekdb 本地 server 模式（TCP）跨 Windows/Linux/macOS；数据落在本地 .data/seekdb。</li>
+  </ul>
+
+  <footer>
+    <span>复现：npm install &amp;&amp; npm run dev；质量：npm run eval:quality；基准：npm run bench:browser -- --backend=webgpu / --hide-gpu=true</span>
+    <span>数据：bench/summary.json · quality.json · model-manifest.json</span>
+  </footer>
+</body>
+</html>

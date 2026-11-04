@@ -1,0 +1,61 @@
+{
+  "generatedAt": "2026-11-04T14:24:39.546Z",
+  "model": {
+    "id": "bge-small-zh-v1.5",
+    "source": "https://huggingface.co/Xenova/bge-small-zh-v1.5",
+    "dimension": 512,
+    "pooling": "CLS + L2 normalize"
+  },
+  "eval": {
+    "queries": 24,
+    "chunks": 26,
+    "docs": 12,
+    "topK": 5,
+    "metric": "Recall@5 / nDCG@5（文档级，取每个文档最高分块）",
+    "method": "使用与线上相同的 chunkText 切分（420 字 / 80 字重叠），同一 tokenizer 与 CLS+L2 归一化；对每个文档取最高余弦相似度块排序，计算 Recall@5、nDCG@5 与 MRR。评测在 Node.js CPU（onnxruntime-node）上离线执行，模型文件与应用运行的是同一份。"
+  },
+  "models": [
+    {
+      "name": "fp32",
+      "label": "FP32 基线",
+      "dtype": "fp32",
+      "file": "onnx/model.onnx",
+      "bytes": 94851877,
+      "compression": 1,
+      "recall5": 0.9652777777777777,
+      "ndcg5": 0.9012353395796642,
+      "mrr": 0.9097222222222223,
+      "embedMsPerQuery": 1.2983916666666648,
+      "chunkEmbedMsPerBlock": 10.369803846153847,
+      "loadMs": 143.5835
+    },
+    {
+      "name": "fp16",
+      "label": "FP16（WebGPU）",
+      "dtype": "fp16",
+      "file": "onnx/model_fp16.onnx",
+      "bytes": 47497427,
+      "compression": 1.9969897948366762,
+      "recall5": 0.9652777777777777,
+      "ndcg5": 0.9012353395796642,
+      "mrr": 0.9097222222222223,
+      "embedMsPerQuery": 1.2816333333333318,
+      "chunkEmbedMsPerBlock": 11.543092307692303,
+      "loadMs": 136.07819999999992
+    },
+    {
+      "name": "q8",
+      "label": "INT8（WASM）",
+      "dtype": "q8",
+      "file": "onnx/model_quantized.onnx",
+      "bytes": 24010842,
+      "compression": 3.9503769588754944,
+      "recall5": 0.9444444444444443,
+      "ndcg5": 0.8999107918715811,
+      "mrr": 0.9236111111111112,
+      "embedMsPerQuery": 0.8972416666666732,
+      "chunkEmbedMsPerBlock": 6.1381192307692345,
+      "loadMs": 57.085199999999986
+    }
+  ]
+}

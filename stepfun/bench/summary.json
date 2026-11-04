@@ -1,0 +1,122 @@
+{
+  "generatedAt": "2026-11-04T14:35:00Z",
+  "environment": {
+    "os": "Windows 11 (10.0.26300)",
+    "cpu": "32 logical cores",
+    "memory": "31.8 GB",
+    "browser": "Microsoft Edge 156.0.0.0, headless",
+    "node": "22.14.0",
+    "seekdb": "1.4.0 (OceanBase 4.3.5.3), local server mode",
+    "model": "Xenova/bge-small-zh-v1.5 (ONNX, 512 dims, CLS pooling)",
+    "deviceNote": "WebGPU 在 headless Edge 中可用；WASM 测试通过 --disable-gpu/--disable-features=WebGPU 模拟不支持 WebGPU 的环境。"
+  },
+  "method": {
+    "corpus": "data/corpus.json，12 篇中文文档，按 420 字 / 80 字重叠切分为 26 个块",
+    "queries": "data/eval.json 中前 8 条，3-5 轮重复，记录单位置中位数与 P95",
+    "e2e": "从 Worker 发起查询文本到 /api/search 返回结果并完成解析的耗时；不含 React 渲染",
+    "search": "seekdb hybridSearch（ngram 全文 + HNSW 向量 + RRF）在服务端的调用耗时",
+    "seekdbConfig": "HNSW cosine, ngram_token_size=2, RRF rankWindowSize=60/rankConstant=60",
+    "warmup": "模型加载后先做一次热身推理；基准前再跑一条查询预热。首次导入后的第一次查询单独记录为冷启动。"
+  },
+  "webgpu": {
+    "backend": "webgpu",
+    "dtype": "fp16",
+    "modelLoadMs": 1044.1,
+    "modelTotalLoadMs": 1326.2,
+    "import": {
+      "docs": 12,
+      "chunks": 26,
+      "embedMs": 277.7,
+      "writeMs": 87.1,
+      "refreshMs": 628.7,
+      "chunksPerSecond": 93.6
+    },
+    "query": {
+      "embedMs": {
+        "median": 10.4,
+        "p95": 13.44
+      },
+      "searchMs": {
+        "median": 5.38,
+        "p95": 6.37
+      },
+      "e2eMs": {
+        "median": 18.15,
+        "p95": 21.19
+      },
+      "firstQueryColdMs": 61.1
+    },
+    "runs": [
+      "bench/browser-webgpu-fp16.json",
+      "bench/browser-results.json"
+    ]
+  },
+  "wasm": {
+    "backend": "wasm",
+    "dtype": "q8",
+    "threads": 4,
+    "fallbackReason": "navigator.gpu.requestAdapter() 返回空（测试中关闭 WebGPU）",
+    "modelLoadMs": 655.3,
+    "modelTotalLoadMs": 657.1,
+    "import": {
+      "docs": 12,
+      "chunks": 26,
+      "embedMs": 1064.7,
+      "writeMs": 137.5,
+      "refreshMs": 663.2,
+      "chunksPerSecond": 24.4
+    },
+    "query": {
+      "embedMs": {
+        "median": 5.95,
+        "p95": 7.31
+      },
+      "searchMs": {
+        "median": 8.8,
+        "p95": 10.12
+      },
+      "e2eMs": {
+        "median": 20.01,
+        "p95": 23.0
+      },
+      "firstQueryColdMs": 39.2
+    },
+    "runs": [
+      "bench/browser-wasm-auto-fallback.json"
+    ]
+  },
+  "quality": {
+    "eval": "bench/quality.json",
+    "fp32": {
+      "bytes": 94851877,
+      "compression": 1.0,
+      "recall5": 0.9653,
+      "ndcg5": 0.9012
+    },
+    "fp16": {
+      "bytes": 47497427,
+      "compression": 2.0,
+      "recall5": 0.9653,
+      "ndcg5": 0.9012
+    },
+    "int8": {
+      "bytes": 24010842,
+      "compression": 3.95,
+      "recall5": 0.9444,
+      "ndcg5": 0.8999
+    }
+  },
+  "comparison": {
+    "importSpeedupWebgpuVsWasm": 3.82,
+    "queryE2eSpeedupWebgpuVsWasm": 1.1,
+    "int8RecallDropPp": -2.08,
+    "int8NdcgDropPp": -0.13,
+    "fp16QualityChangePp": 0.0
+  },
+  "notes": [
+    "WebGPU 的优势主要在批量文档向量化：26 个块从 1065 ms 降到 278 ms，约 3.8 倍。",
+    "batch=1 的查询向量化，WASM + INT8 并不慢于 WebGPU + FP16；因此查询路径的收益更多来自模型加载、缓存与检索优化。",
+    "首次导入后的第一次查询需要 60-83 ms（索引/缓存冷启动），预热后中位数为 18.6 ms。",
+    "INT8 在 24 条查询 / 26 个块的评测集上 Recall@5 下降 2.08 个百分点，nDCG@5 基本持平（-0.13pp）。"
+  ]
+}

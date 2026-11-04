@@ -1,0 +1,15 @@
+node_modules/
+.data/
+web/dist/
+web/public/ort/
+bench/models/
+bench/tmp/
+web/public/models/bge-small-zh-v1.5/onnx/model.onnx
+*.log
+.DS_Store
+
+.tmp/
+
+
+bench/summary-*.json
+

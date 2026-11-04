@@ -1,0 +1,78 @@
+{
+  "version": "1.0",
+  "description": "阶跃星辰赛题示例语料：端侧 AI、浏览器推理、量化与 seekdb 混合检索。全部为原创说明性文本。",
+  "docs": [
+    {
+      "id": "edge-ai",
+      "title": "端侧 AI 推理：把模型放进用户的浏览器",
+      "source": "示例语料 / 端侧 AI",
+      "content": "端侧 AI 推理是指把机器学习模型部署在用户自己的设备上执行，例如手机、个人电脑或浏览器，而不是把原始数据上传到云端服务器。它最直接的价值是隐私：文档、聊天记录和业务数据始终留在本机，模型只处理本地内存中的数据，不经过网络传输。第二个价值是延迟：省去上传、排队和下载结果的往返时间，交互可以做到即时响应。第三个价值是离线可用与成本可控，应用不依赖云端推理 API 的配额和网络状况。\n\n端侧推理的代价是算力、内存和工程复杂度受设备限制。一个在服务器上很普通的模型，放到浏览器里可能面临显存不足、首次加载慢、算子不被支持等问题。因此端侧方案通常要配合模型量化、算子融合、批处理和缓存策略。浏览器侧常见的技术组合是 Transformers.js 负责模型与分词器加载，ONNX Runtime Web 负责图执行，WebGPU 提供 GPU 加速，WebGPU 不可用时自动回退到 WASM。\n\n在个人知识库场景中，端侧推理意味着文档向量化和查询向量化都必须发生在浏览器进程内。服务端只保存向量、原文和元数据，不能代替客户端生成 embedding，也不能预先算好结果回放。这样才能同时满足隐私、离线与可复现的要求。"
+    },
+    {
+      "id": "webgpu",
+      "title": "WebGPU：浏览器里的新一代计算接口",
+      "source": "示例语料 / 浏览器运行时",
+      "content": "WebGPU 是 W3C 标准化的新一代 Web 图形与计算 API，Chrome 和 Edge 从 113 版左右开始默认支持。它暴露了更接近现代图形 API 的抽象：先用 navigator.gpu.requestAdapter() 获取 GPU 适配器，再通过 adapter.requestDevice() 创建逻辑设备，然后提交命令缓冲区。与 WebGL 相比，WebGPU 支持 compute shader、storage buffer、更灵活的资源绑定和更低的 CPU 开销，因此适合运行神经网络中的矩阵乘法、归一化和注意力等算子。\n\n在浏览器里使用 WebGPU 需要安全上下文（HTTPS 或 localhost），并且要处理适配器不存在、设备丢失、驱动能力不足等情况。模型推理通常还会检查 shader-f16 特性：支持时可以用 FP16 权重和 FP16 计算，减少显存占用并提升吞吐；不支持时退回 FP32 或改用 WASM。\n\nWebGPU 不是所有设备都可用。集成显卡、旧驱动、远程桌面、无头浏览器都可能拿不到适配器。工程上必须把 WebGPU 当作优先路径而不是唯一路径：启动时探测 navigator.gpu，申请 adapter，加载 FP16 模型并做一次热身推理；任何一步失败都自动降级到 WASM + INT8，并在界面上明确展示当前后端与降级原因。这样即使 GPU 路径不可用，核心的导入、向量化和检索流程仍然可以完成。"
+    },
+    {
+      "id": "transformersjs",
+      "title": "Transformers.js：在浏览器加载 ONNX 模型",
+      "source": "示例语料 / 浏览器运行时",
+      "content": "Transformers.js 是 Hugging Face 提供的 JavaScript 推理库，它把 Transformers 的模型配置、分词器和 pipeline 抽象带到了浏览器与 Node.js。模型通常由 Optimum 从 PyTorch 导出为 ONNX，再由 Transformers.js 通过 ONNX Runtime Web 执行。常见用法是 pipeline('feature-extraction', modelId, { device, dtype })，得到特征提取器后调用 extractor(texts, { pooling: 'cls', normalize: true }) 生成句向量。\n\n在离线或内网环境中，需要把 config.json、tokenizer.json、tokenizer_config.json 以及 onnx 目录下的模型文件放到静态资源目录，并设置 env.allowRemoteModels = false、env.allowLocalModels = true、env.localModelPath = '/models/'。这样模型 ID 会映射到本地路径，不会向 Hugging Face 发起请求。env.useBrowserCache = true 可以让浏览器缓存模型文件，减少二次加载时间。\n\nUI 线程不适合直接跑推理：模型加载和矩阵计算会阻塞渲染。推荐把 pipeline 放进 Web Worker，主线程通过 postMessage 发送文本、接收向量和进度。Worker 内还可以根据 navigator.gpu 与 crossOriginIsolated 选择设备与线程数。bge-small-zh-v1.5 是一个 512 维的中文 embedding 模型，CLS pooling 后做 L2 归一化，适合 cosine 相似度检索。它的 FP32 模型约 94.9 MB，FP16 约 47.5 MB，INT8 约 24.0 MB。"
+    },
+    {
+      "id": "onnxruntime-web",
+      "title": "ONNX Runtime Web：WASM 与 WebGPU 执行提供器",
+      "source": "示例语料 / 浏览器运行时",
+      "content": "ONNX Runtime Web 是 ONNX Runtime 的浏览器版本，负责把 ONNX 计算图调度到不同的执行提供器（Execution Provider）。最通用的是 WASM EP：它把算子编译成 WebAssembly，在 CPU 上运行，兼容性最好。WASM 路径可以使用 SIMD 指令，也可以在满足跨源隔离条件时启用多线程。多线程依赖 SharedArrayBuffer，而 SharedArrayBuffer 要求页面返回 Cross-Origin-Opener-Policy: same-origin 和 Cross-Origin-Embedder-Policy: require-corp 响应头。\n\nWebGPU EP 则把适合并行的算子放到 GPU 上执行，适合矩阵乘、卷积和注意力等大计算量算子。ONNX Runtime Web 会做图优化，例如常量折叠、算子融合和布局转换，减少实际执行的节点数量。模型加载时还要指定 wasm 文件路径：如果使用本地部署，应把 ort-wasm-simd-threaded.jsep.wasm 等文件复制到静态目录，并设置 env.backends.onnx.wasm.wasmPaths，否则运行时会尝试从 CDN 下载。\n\n选择后端时要区分“能用”和“更快”。小模型在 WebGPU 上可能因为数据传输和 kernel 启动开销而未必比 WASM 快，尤其是在 batch=1 的查询向量化场景。因此性能测试要分别记录首次加载、预热后单条查询、批量文档向量化和检索延迟，并在相同设备、浏览器、模型精度和批大小下比较。"
+    },
+    {
+      "id": "int8",
+      "title": "INT8 量化：把 94.9 MB 压到 24.0 MB",
+      "source": "示例语料 / 模型量化",
+      "content": "INT8 量化把 FP32 的权重和激活值映射到 8 位整数，用 scale（缩放因子）和 zero point（零点）描述浮点区间与整数区间的关系。常见做法是对权重做对称的 per-channel 量化，对激活做 per-tensor 或 per-channel 量化，并在推理时用整数矩阵乘法或“反量化后计算”的方式完成算子。量化前通常需要一小批校准数据估计激活的动态范围；也可以使用动态量化，在运行时根据实际输入计算 scale。\n\n量化的直接收益是模型体积和内存带宽。FP32 每个参数占 4 字节，INT8 只占 1 字节，理论上压缩 4 倍；实际文件还要包含量化参数和部分保留的 FP32 算子，因此压缩比通常略低于 4。以 bge-small-zh-v1.5 为例，FP32 的 model.onnx 为 94,851,877 字节，INT8 的 model_quantized.onnx 为 24,010,842 字节，压缩比约为 3.95 倍。体积下降后，浏览器首次下载、缓存占用和 WASM 内存压力都会降低。\n\n量化会带来精度损失，但 embedding 模型对量化通常比较鲁棒。评估时不能只看肉眼看结果，而要在固定评测集上计算 Recall@K、nDCG@K 等指标，并报告量化前后的变化幅度。如果质量下降明显，可以尝试 per-channel 量化、保留敏感层为 FP32、使用更好的校准集，或改用 FP16。对于端侧知识库，INT8 适合作为 WASM 兜底路径，FP16 适合作为 WebGPU 优先路径，两者都应在界面中标注实际使用的精度。"
+    },
+    {
+      "id": "fp16",
+      "title": "FP16 与混合精度：WebGPU 的默认选择",
+      "source": "示例语料 / 模型量化",
+      "content": "FP16 使用 16 位浮点数表示权重和激活，包含 1 位符号、5 位指数和 10 位尾数。它的动态范围比 FP32 小，但在神经网络推理中通常足够，尤其是当累加仍然使用 FP32 时。FP16 的主要收益是显存占用减半、内存带宽减半，并让 GPU 的矩阵运算单元发挥更高吞吐。WebGPU 通过 shader-f16 特性支持 FP16 计算，浏览器和显卡驱动需要同时满足条件。\n\n在 Transformers.js 中，可以通过 dtype: 'fp16' 加载 ONNX 的 FP16 模型。以 bge-small-zh-v1.5 为例，FP32 模型约 94.9 MB，FP16 模型约 47.5 MB，压缩比约 2.0 倍。相比 INT8，FP16 的数值精度更高，通常更接近 FP32 的检索质量，但体积和带宽开销也更大。对于显存充足的设备，FP16 + WebGPU 往往能在质量和速度之间取得较好的平衡。\n\n混合精度的关键是“存储用 FP16、累加用 FP32”，避免长序列累加时出现明显误差。评测时应把 FP16 与 FP32 放在同一评测集、同一分词与池化配置下比较 Recall@5 和 nDCG@5，并记录模型体积、加载时间和查询延迟。需要注意，某些旧 GPU 或浏览器即使暴露了 WebGPU，也可能不支持 shader-f16；此时应改用 FP32 或回退到 WASM，而不是强行运行导致结果异常。"
+    },
+    {
+      "id": "seekdb",
+      "title": "seekdb：为 AI 应用设计的轻量数据库",
+      "source": "示例语料 / seekdb",
+      "content": "seekdb 是 OceanBase 推出的 AI 原生数据库，兼容 MySQL 协议，提供向量检索、全文检索和标量过滤能力。它既可以以嵌入式方式运行，也可以作为本地 server 或远端服务部署。对于个人知识库这类轻量应用，本地 server 模式比较合适：应用通过 seekdb-js 连接 127.0.0.1 上的实例，数据落在本地目录，不需要额外的云服务。\n\nseekdb 的核心抽象是 collection。创建 collection 时指定向量维度、距离度量和索引配置，之后可以用 add、upsert、update、delete 写入数据，用 query 做向量检索，用 hybridSearch 做向量与全文的混合检索。collection 的每一条记录包含 id、document、embedding 和 metadata；metadata 可以保存文档 ID、标题、来源、块序号等业务字段，检索结果会一并返回。\n\nseekdb 兼容 MySQL 事务与 SQL，适合需要“向量 + 关系数据”联合查询的场景。它的混合检索在数据库内部完成，客户端只提交查询文本和查询向量，不应把向量结果与全文结果分别取回后在客户端拼合。应用侧还要处理索引刷新：新写入的数据在 refresh_index 后对检索可见，连续导入和切换 collection 时要保证当前会话与知识库状态一致。"
+    },
+    {
+      "id": "seekdb-vector",
+      "title": "seekdb 向量索引与增量写入",
+      "source": "示例语料 / seekdb",
+      "content": "seekdb 的向量检索使用 HNSW 一类近似最近邻索引。创建 collection 时需要指定维度，例如 bge-small-zh-v1.5 输出 512 维向量；距离度量常用 cosine，写入前应对向量做 L2 归一化，这样内积与 cosine 排序一致。HNSW 的参数包括 m（每个节点的邻居数）、ef_construction（建图时的候选队列长度）和 ef_search（查询时的候选队列长度），它们共同影响召回率、内存占用和查询延迟。\n\n数据写入使用 upsert 可以保证幂等：同一文档重复导入时，用“文档 ID + 块序号”生成稳定主键，重复写入会覆盖旧记录而不是产生重复块。批量写入比逐条写入更高效，因为可以减少网络往返和事务开销。写入完成后调用 refresh_index，让新增向量进入可检索的索引结构；刷新本身有成本，应该在一批导入结束后执行一次，而不是每写一条就刷新。\n\n增量导入和切换知识库时，要保证查询使用的是当前 collection。应用可以把 collection ID 存在前端会话中，每次检索都显式带上 ID；服务端要校验该 collection 是否存在、维度是否匹配。对于删除文档，可以按元数据过滤删除对应的块，或直接删除整个 collection。无论哪种方式，都要在操作后确认 count 和检索结果与预期一致，避免旧数据残留造成“看起来还在”的幻觉。"
+    },
+    {
+      "id": "seekdb-fulltext",
+      "title": "seekdb 全文检索与中文 ngram 分词",
+      "source": "示例语料 / seekdb",
+      "content": "全文检索解决的是“精确词项匹配”问题：用户输入一个产品名、错误码或专有名词时，向量检索可能因为语义泛化而召回不相关的内容，而倒排索引可以直接定位包含这些词的文档。seekdb 支持全文索引，并通过 whereDocument 的 $contains 条件表达全文查询。索引的构建依赖分词器：英文可以按空格和标点切分，中文没有天然空格，需要使用 ngram、beng 或 ik 等分词方式。\n\nngram 分词把连续文本切成固定长度的片段。例如 ngram_token_size = 2 时，“混合检索”会被切成“混合”“合检”“检索”等二元组。查询时同样切分，因此即使用户输入的是句子中的一部分，也能匹配到包含该片段的文档。二元组的召回较高，但索引体积和噪声也会增加；可以根据语料特点调整 ngram_token_size，或在应用层先抽取关键词再传入 $contains。\n\n全文检索的打分通常基于 BM25 一类算法，考虑词频、逆文档频率和文档长度。它与向量相似度的分数尺度不同，不能直接相加。因此混合检索需要用 RRF 这类基于排名的融合方法，而不是把两个分数简单加权。对于中文知识库，建议同时保留全文索引和向量索引：前者保证专有名词和精确短语的召回，后者保证同义表达和语义问题的召回。"
+    },
+    {
+      "id": "hybrid-rrf",
+      "title": "混合检索与 RRF：让向量和全文各自发挥长处",
+      "source": "示例语料 / 混合检索",
+      "content": "向量检索擅长语义相似：用户问“怎么让浏览器推理更快”，即使文档里没有“更快”这个词，也能召回讲 WebGPU、WASM 线程和批处理的内容。全文检索擅长精确匹配：错误码、产品名、函数名、专有名词，用倒排索引往往比向量更可靠。混合检索把两路候选合并，目标是在语义召回和精确召回之间取得平衡。\n\n最简单的融合方式是把两路分数加权相加，但向量相似度和 BM25 分数的量纲、分布都不同，归一化也很脆弱。RRF（Reciprocal Rank Fusion）只使用排名，不依赖原始分数：对每个候选文档计算 1 / (k + rank)，再把两路的贡献相加，k 是 rank constant，常用 60。rank window size 控制每路取多少名参与融合。RRF 对分数尺度不敏感，工程上稳定，适合异构检索结果的融合。\n\n在 seekdb 中，混合检索应通过数据库的 hybridSearch 完成：query 部分传入全文条件，knn 部分传入查询向量，rank 指定 rrf 参数，数据库内部完成候选合并与排序。客户端不能分别请求向量结果和全文结果再自行拼合，否则既不符合题目要求，也无法利用数据库的优化。评估混合检索时，要同时看 Recall@K、nDCG@K 和端到端延迟，并与纯向量、纯全文两条基线对比。"
+    },
+    {
+      "id": "rag",
+      "title": "RAG 知识库：切分、召回与引用",
+      "source": "示例语料 / RAG",
+      "content": "RAG（Retrieval-Augmented Generation）先在知识库中检索与问题相关的片段，再把片段作为上下文交给生成模型。即使不接生成模型，检索本身也构成一个可用的个人知识库：用户输入问题，系统返回排序后的原文片段和来源。一个典型的 RAG 流程包括文档解析、切分、向量化、索引、查询向量化、召回、重排和引用展示。\n\n切分策略直接影响检索质量。块太大，一个块里混入多个主题，向量被平均后语义模糊；块太小，上下文不足，答案容易断裂。中文文档常用 300 到 500 字一块，相邻块保留 50 到 100 字重叠，并在句末或段落边界断开。每个块要保存文档 ID、标题、块序号和来源，展示结果时才能还原上下文并提供引用。\n\n评估检索质量需要标注查询与相关文档的对应关系，然后计算 Recall@K（前 K 个结果中是否包含相关文档）和 nDCG@K（相关文档是否排在更靠前的位置）。评估集要覆盖精确词查询、同义表达、跨文档问题和无答案问题。对于端侧知识库，还要记录不同量化精度、不同后端下的质量变化，确保性能优化不是以明显牺牲检索质量为代价。"
+    },
+    {
+      "id": "perf",
+      "title": "端侧性能优化：分阶段计时与可复现实验",
+      "source": "示例语料 / 性能优化",
+      "content": "端侧推理的性能优化要建立在可测量的分阶段计时上。一次完整的查询至少包括：查询文本进入 Worker、分词、模型前向、向量归一化、HTTP 请求、seekdb 检索、结果渲染。只报告一个端到端数字，无法判断瓶颈在模型、网络还是数据库。建议分别记录模型下载与加载、文档向量化、写入与索引刷新、查询向量化、seekdb 检索，以及用户提交到结果可展示的端到端延迟。\n\n批处理是提升文档向量化吞吐最直接的手段。一次把 8 到 32 条文本送入模型，可以摊薄 kernel 启动和数据传输开销；但批太大也会增加单次延迟和内存峰值。查询场景通常 batch=1，优化重点是模型预热、缓存和减少 Worker 通信。首次加载与预热后的性能要分开报告：首次包含模型下载、ONNX 会话创建和算子编译，后续请求只包含推理与检索。\n\n索引刷新策略同样影响体验。增量导入时，可以先批量写入，再统一 refresh_index，避免每写一条都触发索引更新；同时要在界面上显示刷新进度，确保用户知道什么时候可以检索到新内容。性能数据应在固定设备、浏览器版本、语料、查询集、模型精度、批大小和 seekdb 配置下采集，重复多轮并报告中位数与 P95，不能只挑最快的一次。对比单项优化时，其他条件必须保持一致。"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "name": "stepfun-edge-kb",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "端侧 AI 推理性能优化与 seekdb 混合检索 —— 浏览器本地向量化的迷你知识库",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "predev": "node scripts/prepare-ort.mjs",
+    "dev": "concurrently -k -n seekdb,web -c cyan,magenta \"node server/index.mjs\" \"vite --config web/vite.config.mjs\"",
+    "prebuild": "node scripts/prepare-ort.mjs",
+    "build": "vite build --config web/vite.config.mjs",
+    "prestart": "node scripts/prepare-ort.mjs",
+    "start": "node server/index.mjs",
+    "fetch:models": "node scripts/fetch-models.mjs",
+    "fetch:fp32": "node scripts/fetch-models.mjs --fp32",
+    "prepare:ort": "node scripts/prepare-ort.mjs",
+    "eval:quality": "node scripts/eval-quality.mjs",
+    "bench:browser": "node scripts/bench-browser.mjs",
+    "postinstall": "node scripts/prepare-ort.mjs"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "^4.3.2",
+    "@oceanbase/seekdb-node": "1.4.0",
+    "express": "^5.3.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "seekdb": "1.4.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.2.0",
+    "concurrently": "^10.0.6",
+    "playwright-core": "^1.64.1",
+    "vite": "^7.3.7"
+  }
+}
