@@ -72,9 +72,12 @@ npm start            # http://127.0.0.1:8787
 | `SEEKDB_DATA_DIR` | `.data/seekdb` | seekdb 数据目录 |
 | `SEEKDB_STARTUP_TIMEOUT` | `300000` | 首次启动等待毫秒数 |
 
-### 如果 `npm install` 跳过了 postinstall
+### 如果 `npm install` 被原生依赖的 postinstall 中断
+
+某些受限环境（无子进程权限、无外网）会在 `onnxruntime-node` / `sharp` 的 postinstall 阶段失败。此时可以跳过安装脚本，再手动准备浏览器需要的 ORT WASM：
 
 ```bash
+npm install --ignore-scripts
 npm run prepare:ort   # 复制 ONNX Runtime WASM 到 web/public/ort
 npm run fetch:models  # 仅在模型文件缺失时需要（默认已随仓库提供）
 ```
