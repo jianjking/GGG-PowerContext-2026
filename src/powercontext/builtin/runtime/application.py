@@ -166,6 +166,7 @@ from powercontext.builtin.runtime._scope_cache import (
     ScopeCacheObserver,
     ScopeEvictor,
 )
+from powercontext.builtin.runtime.context_pack import ContextPack, ContextPackDelta, ContextPackError
 from powercontext.builtin.runtime.decision_model import DecisionModel
 from powercontext.builtin.runtime.errors import InvalidRuntimeRequestError, TopicMemoryProcessingUnavailableError
 from powercontext.builtin.runtime.models import (
@@ -846,6 +847,36 @@ class ScopedContextApplication:
             if authorize_scopes is not None:
                 await authorize_scopes((self.scope_id, *scope.context_references))
             return await self._prepare(request, scope)
+
+    async def prepare_incremental(
+        self,
+        request: PrepareContextRequest,
+        /,
+        base_pack: ContextPack | None = None,
+        *,
+        authorize_scopes: Callable[[tuple[str, ...]], Awaitable[None]] | None = None,
+    ) -> ContextPack | ContextPackDelta:
+        """Prepare this turn's context as a full Pack or a prefix delta.
+
+        The target is always derived from the ordinary ``prepare`` result, so
+        incremental transport cannot change the selected text or citations.
+        """
+
+        prepared = await self.prepare(request, authorize_scopes=authorize_scopes)
+        # A slightly smaller cap than the public default keeps a reusable
+        # prefix chunk at the stable trust preamble instead of losing the whole
+        # first 512-byte chunk when one item changes.
+        target = ContextPack.from_content(prepared.content or "", chunk_bytes=400)
+        if base_pack is None:
+            return target
+        if not isinstance(base_pack, ContextPack):
+            if isinstance(base_pack, (bytes, bytearray)):
+                base_pack = ContextPack.from_bytes(bytes(base_pack))
+            else:
+                raise ContextPackError(  # noqa: TRY003
+                    "base_pack must be a ContextPack or its serialized bytes"
+                )
+        return ContextPackDelta.between(base_pack, target)
 
     async def _prepare(self, request: PrepareContextRequest, scope: ScopeDescriptor, /) -> PreparedContext:
         build, effort = await self._prepare_build(request, scope)
