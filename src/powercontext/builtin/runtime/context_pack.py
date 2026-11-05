@@ -226,7 +226,10 @@ def _chunk_utf8(content: str | bytes, chunk_bytes: int) -> tuple[bytes, ...]:
     chunks: list[bytes] = []
     current = bytearray()
     for character in content:
-        encoded = character.encode("utf-8")
+        try:
+            encoded = character.encode("utf-8")
+        except UnicodeEncodeError as error:
+            raise ContextPackError("content must be valid UTF-8 text") from error
         if len(encoded) > chunk_bytes:
             raise ContextPackError("a single UTF-8 character exceeds chunk_bytes")
         if current and len(current) + len(encoded) > chunk_bytes:
